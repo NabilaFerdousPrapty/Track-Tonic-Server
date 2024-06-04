@@ -1,13 +1,9 @@
 
-//
-//
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
 const app = express();
-
-
 
 // middleware
 const corsOptions = {
@@ -34,7 +30,7 @@ app.listen(port, () => {
 });
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const e = require('express');
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.pflyccd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -45,8 +41,9 @@ const client = new MongoClient(uri, {
         deprecationErrors: true,
     }
 });
-
+const reviewCollection = client.db("TrackTonic").collection("reviews");
 async function run() {
+
     try {
         // Connect the client to the server	(optional starting in v4.7)
         // await client.connect();
@@ -54,7 +51,7 @@ async function run() {
         // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
-
+    app.get()
 
 
 
