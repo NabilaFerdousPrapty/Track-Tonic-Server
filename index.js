@@ -1,3 +1,6 @@
+
+//
+//
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -24,7 +27,7 @@ app.use(express.json());
 // jwt verify middleware
 
 app.get('/', (req, res) => {
-    res.send('Alternative product is searching!');
+    res.send('Fitness trainer is running!');
 });
 app.listen(port, () => {
     console.log(`Server is running on port: ${port}`);
