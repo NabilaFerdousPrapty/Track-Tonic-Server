@@ -47,6 +47,7 @@ const client = new MongoClient(uri, {
 const reviewCollection = client.db("TrackTonic").collection("reviews");
 const trainersCollection = client.db("TrackTonic").collection("trainers");
 const postsCollection = client.db("TrackTonic").collection("forumPost");
+const usersCollections = client.db("TrackTonic").collection("users");
 async function run() {
 
     try {
@@ -68,12 +69,31 @@ async function run() {
             res.send(trainers)
         }
         );
+        app.get('/trainers/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const trainer = await trainersCollection.findOne(query);
+            res.send(trainer)
+        }
+        );
         app.get('/posts', async (req, res) => {
             const cursor = postsCollection.find({});
             const posts = await cursor.toArray();
             res.send(posts)
         }
         );
+        app.post('/users', async (req, res) => {
+            const newUser = req.body;
+            const query = { email: newUser.email };
+            const existingUser = await usersCollections.findOne(query);
+            if (existingUser) {
+              res.send({ message: "User already exists", insertedId: null })
+              return
+      
+            }
+            const result = await usersCollections.insertOne(newUser);
+            res.send(result);
+        });
 
 
 
