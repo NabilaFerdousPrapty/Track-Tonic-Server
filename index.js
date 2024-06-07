@@ -2,8 +2,10 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 7000;
 const app = express();
+// const jwt = require('jsonwebtoken');
+// const cookieParser = require('cookie-parser');
 
 // middleware
 const corsOptions = {
@@ -18,6 +20,7 @@ const corsOptions = {
 }
 app.use(cors(corsOptions))
 app.use(express.json());
+// app.use(cookieParser());
 
 
 // jwt verify middleware
@@ -42,6 +45,8 @@ const client = new MongoClient(uri, {
     }
 });
 const reviewCollection = client.db("TrackTonic").collection("reviews");
+const trainersCollection = client.db("TrackTonic").collection("trainers");
+const postsCollection = client.db("TrackTonic").collection("forumPost");
 async function run() {
 
     try {
@@ -51,26 +56,24 @@ async function run() {
         // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
-    app.get()
+        app.get('/reviews', async (req, res) => {
+            const cursor = reviewCollection.find({});
+            const reviews = await cursor.toArray();
+            res.send(reviews)
+        });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        app.get('/trainers', async (req, res) => {
+            const cursor = trainersCollection.find({});
+            const trainers = await cursor.toArray();
+            res.send(trainers)
+        }
+        );
+        app.get('/posts', async (req, res) => {
+            const cursor = postsCollection.find({});
+            const posts = await cursor.toArray();
+            res.send(posts)
+        }
+        );
 
 
 
