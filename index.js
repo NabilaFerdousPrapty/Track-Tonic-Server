@@ -4,8 +4,8 @@ const cors = require('cors');
 require('dotenv').config();
 const port = process.env.PORT || 7000;
 const app = express();
-// const jwt = require('jsonwebtoken');
-// const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 
 // middleware
 const corsOptions = {
@@ -20,10 +20,18 @@ const corsOptions = {
 }
 app.use(cors(corsOptions))
 app.use(express.json());
-// app.use(cookieParser());
+app.use(cookieParser());
 
 
 // jwt verify middleware
+app.post('/jwt', async (req, res) => {
+    const user = req.body;
+    const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '1h'
+    })
+    res.send({ token });
+
+})
 
 app.get('/', (req, res) => {
     res.send('Fitness trainer is running!');
@@ -48,6 +56,7 @@ const reviewCollection = client.db("TrackTonic").collection("reviews");
 const trainersCollection = client.db("TrackTonic").collection("trainers");
 const postsCollection = client.db("TrackTonic").collection("forumPost");
 const usersCollections = client.db("TrackTonic").collection("users");
+const newsletterCollection = client.db("TrackTonic").collection("newsletter");
 async function run() {
 
     try {
@@ -87,15 +96,56 @@ async function run() {
             const query = { email: newUser.email };
             const existingUser = await usersCollections.findOne(query);
             if (existingUser) {
-              res.send({ message: "User already exists", insertedId: null })
-              return
-      
+                res.send({ message: "User already exists", insertedId: null })
+                return
+
             }
             const result = await usersCollections.insertOne(newUser);
             res.send(result);
         });
+        app.post('/newsletter', async (req, res) => {
+            const newEmail = req.body;
+            const query = { email: newEmail.email };
+            const existingEmail = await newsletterCollection.findOne(query);
+            if (existingEmail) {
+                res.send({ message: "Email already exists", insertedId: null })
+                return
 
+            }
+            const result = await newsletterCollection.insertOne(newEmail);
+            res.send(result);
+        }
+        );
+        app.get('/users', async (req, res) => {
+            const cursor = usersCollections.find({});
+            const users = await cursor.toArray();
+            res.send(users)
+        }
+        );
+        
 
+        app.get('/users/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const user = await usersCollections.findOne(query);
+            let admin = false;
+            if (user) {
+                admin = user?.role === 'admin';
+            }
+            res.send({ admin })
+        }
+        );
+        app.get('/users/trainer/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const user = await usersCollections.findOne(query);
+            let trainer = false;
+            if (user) {
+                trainer = user?.role === 'trainer';
+            }
+            res.send({ trainer })
+        }
+        );
 
     } finally {
         // Ensures that the client will close when you finish/error
