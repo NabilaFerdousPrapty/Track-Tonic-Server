@@ -5,6 +5,7 @@ require('dotenv').config();
 const port = process.env.PORT || 7000;
 const app = express();
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const cookieParser = require('cookie-parser');
 
 // middleware
@@ -58,6 +59,7 @@ const postsCollection = client.db("TrackTonic").collection("forumPost");
 const usersCollections = client.db("TrackTonic").collection("users");
 const newsletterCollection = client.db("TrackTonic").collection("newsletter");
 const bookedTrainersCollection = client.db("TrackTonic").collection("bookedTrainers");
+const paymentCollection = client.db("TrackTonic").collection("payments");
 async function run() {
 
     try {
@@ -206,6 +208,54 @@ async function run() {
             res.send({ trainer })
         }
         );
+        app.post("/create_payment_intent", async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+            const paymentIntent = await stripe.paymentIntents.create({
+              amount: amount,
+              currency: 'usd',
+      
+              payment_method_types: ['card']
+            });
+      
+            res.send({
+              clientSecret: paymentIntent.client_secret
+      
+            });
+            console.log('secret', paymentIntent.client_secret);
+          }
+          );
+          app.post('/payments', async (req, res) => {
+            const payment = req.body;
+            const paymentResult = await paymentCollection.insertOne(payment);
+      
+            //  carefully delete each item from the cart
+            console.log('payment info', payment);
+    
+      
+            res.send(payment);
+          })
+          app.get('/payments', async (req, res) => {
+            const cursor = paymentCollection.find({});
+            const payments = await cursor.toArray();
+            res.send(payments)
+          }
+        );
+        app.get('/payments/:email', async (req, res) => {
+            try {
+                const email = req.params.email;
+                const query = { email: email };
+                const cursor = paymentCollection.find(query);
+                const payments = await cursor.toArray();
+                res.send(payments);
+            } catch (error) {
+                console.error("Error fetching payments:", error);
+                res.status(500).send("Internal Server Error");
+            }
+        });
+        
+
+      
 
     } finally {
         // Ensures that the client will close when you finish/error
