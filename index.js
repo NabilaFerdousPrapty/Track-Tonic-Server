@@ -57,6 +57,7 @@ const trainersCollection = client.db("TrackTonic").collection("trainers");
 const postsCollection = client.db("TrackTonic").collection("forumPost");
 const usersCollections = client.db("TrackTonic").collection("users");
 const newsletterCollection = client.db("TrackTonic").collection("newsletter");
+const bookedTrainersCollection = client.db("TrackTonic").collection("bookedTrainers");
 async function run() {
 
     try {
@@ -86,9 +87,15 @@ async function run() {
         );
 
         app.get('/trainers', async (req, res) => {
-            const cursor = trainersCollection.find({});
+            const cursor = trainersCollection.find({ status: 'approved' });
             const trainers = await cursor.toArray();
             res.send(trainers)
+        }
+        );
+        app.post('/trainers', async (req, res) => {
+            const newTrainer = req.body;
+            const result = await trainersCollection.insertOne(newTrainer);
+            res.send(result);
         }
         );
         app.get('/trainers/:id', async (req, res) => {
@@ -97,6 +104,31 @@ async function run() {
             const trainer = await trainersCollection.findOne(query);
             res.send(trainer)
         }
+        );
+        app.patch('/trainers/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: 'approved'
+                },
+            };
+            const result = await trainersCollection.updateOne(query, updateDoc);
+            res.send(result)
+        }
+        );
+        app.delete('/trainers/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await trainersCollection.deleteOne(query);
+            res.send(result)
+        }
+        );
+        app.post('/bookedTrainers', async (req, res) => {
+            const newBooking = req.body;
+            const result = await bookedTrainersCollection.insertOne(newBooking);
+            res.send(result);
+        }   
         );
         app.get('/posts', async (req, res) => {
             const cursor = postsCollection.find({});
@@ -136,6 +168,14 @@ async function run() {
             res.send(result);
         }
         );
+        app.get('/newsletter', async (req, res) => {
+            const cursor = newsletterCollection.find({});
+            const emails = await cursor.toArray();
+            res.send(emails)
+        }
+        );
+
+
         app.get('/users', async (req, res) => {
             const cursor = usersCollections.find({});
             const users = await cursor.toArray();
