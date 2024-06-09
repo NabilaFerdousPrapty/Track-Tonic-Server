@@ -65,12 +65,25 @@ async function run() {
         // // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
-
+        
         app.get('/reviews', async (req, res) => {
             const cursor = reviewCollection.find({});
             const reviews = await cursor.toArray();
             res.send(reviews)
         });
+        app.post('/reviews', async (req, res) => {
+            const newReview = req.body;
+            const result = await reviewCollection.insertOne(newReview);
+            res.send(result);
+        }
+        );
+        app.get('/reviews/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const review = await reviewCollection.findOne(query);
+            res.send(review)
+        }
+        );
 
         app.get('/trainers', async (req, res) => {
             const cursor = trainersCollection.find({});
