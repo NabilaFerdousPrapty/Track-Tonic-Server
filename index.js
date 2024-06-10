@@ -12,7 +12,10 @@ const port = process.env.PORT || 7000;
 
 app.use(cors(
     {
-        origin: ["http://localhost:5173"],
+        origin: ["http://localhost:5173",
+            "https://tracktonicfitnesstraining.web.app",
+            "https://tracktonicfitnesstraining.firebaseapp.com",
+        ],
         credentials: true
     }
 ))
@@ -139,7 +142,14 @@ app.get('/trainers/:id', async (req, res) => {
     res.send(trainer)
 }
 );
-app.patch('/approveTrainer/:id', async (req, res) => {
+app.get('/trainers/email/:email', async (req, res) => {
+    const email = req.params.email;
+    const query = { email: email };
+    const trainer = await trainersCollection.find(query).toArray();
+    res.send(trainer);
+}   
+);
+app.patch('/approveTrainer/:id',verifyAdmin,verifyToken, async (req, res) => {
 
     const id = req.params.id;
     console.log(id);
@@ -260,7 +270,7 @@ app.get('/users/trainer/:email', async (req, res) => {
     res.send({ trainer })
 }
 );
-app.post('/classes', async (req, res) => {
+app.post('/classes',verifyAdmin,verifyToken, async (req, res) => {
     const newClass = req.body;
     const result = await classesCollection.insertOne(newClass);
     res.send(result);
@@ -279,8 +289,8 @@ app.get('/classes', async (req, res) => {
         console.error('Error fetching classes:', err);
         res.status(500).json({ message: 'Internal Server Error' });
     }
-}   
-);
+});
+
 app.get('/classes/:id', async (req, res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
