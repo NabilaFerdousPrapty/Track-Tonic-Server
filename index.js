@@ -53,6 +53,7 @@ const usersCollections = client.db("TrackTonic").collection("users");
 const newsletterCollection = client.db("TrackTonic").collection("newsletter");
 const bookedTrainersCollection = client.db("TrackTonic").collection("bookedTrainers");
 const paymentCollection = client.db("TrackTonic").collection("payments");
+const classesCollection = client.db("TrackTonic").collection("classes");
 
 
 
@@ -182,6 +183,13 @@ app.get('/posts', async (req, res) => {
     res.send(posts)
 }
 );
+app.post('/posts', async (req, res) => {
+    const newPost = req.body;
+    const result = await postsCollection.insertOne(newPost);
+    res.send(result);
+}
+);
+
 app.get('/posts/:id', async (req, res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
@@ -252,6 +260,42 @@ app.get('/users/trainer/:email', async (req, res) => {
     res.send({ trainer })
 }
 );
+app.post('/classes', async (req, res) => {
+    const newClass = req.body;
+    const result = await classesCollection.insertOne(newClass);
+    res.send(result);
+}   
+);
+app.get('/classes', async (req, res) => {
+    try {
+        const { page = 1, limit = 6 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // Fetch classes with pagination
+        const classes = await classesCollection.find().skip(skip).limit(parseInt(limit)).toArray();
+        
+        res.json(classes);
+    } catch (err) {
+        console.error('Error fetching classes:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}   
+);
+app.get('/classes/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const classes = await classesCollection.findOne(query);
+    res.send(classes)
+}
+);
+app.get('/featuredClasses', async (req, res) => {
+    try {
+        const featuredClasses = await classesCollection.find().sort({ total_bookings: -1 }).limit(6).toArray();
+        res.json(featuredClasses);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 app.post("/create_payment_intent", async (req, res) => {
     const { price } = req.body;
     const amount = parseInt(price * 100);
@@ -279,6 +323,38 @@ app.post('/payments', async (req, res) => {
 
     res.send(payment);
 })
+app.patch('/posts/:postId/vote', async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { type } = req.body;
+
+        // Check if the type of vote is valid
+        if (type !== 'upvote' && type !== 'downvote') {
+            return res.status(400).json({ error: 'Invalid vote type' });
+        }
+
+        // Define the update object based on the vote type
+        const update = type === 'upvote' ? { $inc: { vote: 1 } } : { $inc: { vote: -1 } };
+
+        // Update the post in the database and return the updated document
+        const updatedPost = await postsCollection.findByIdAndUpdate(postId, update, { new: true });
+
+        // Check if the post exists
+        if (!updatedPost) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
+        // Return the updated post with the new vote count
+        res.json(updatedPost);
+    } catch (error) {
+        console.error('Error voting for post:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+
+  
 app.get('/payments', async (req, res) => {
     const cursor = paymentCollection.find({});
     const payments = await cursor.toArray();
