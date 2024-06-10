@@ -13,8 +13,8 @@ const corsOptions = {
     origin: [
         'http://localhost:5173',
         'http://localhost:5174',
-        '',
-        ''
+        'https://tracktonicfitnesstraining.web.app',
+        'https://tracktonicfitnesstraining.firebaseapp.com'
     ],
     credentials: true,
     optionSuccessStatus: 200,
@@ -25,14 +25,34 @@ app.use(cookieParser());
 
 
 // jwt verify middleware
-app.post('/jwt', async (req, res) => {
-    const user = req.body;
-    const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: '1h'
+const verifyToken = (req, res, next) => {
+    console.log('inside verified token', req.headers.authorization);
+    if (!req.headers.authorization) {
+      return res.status(401).send({ message: 'Unauthorized Access' });
+    }
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+      if (error) {
+        return res.status(401).send({ message: 'Unauthorized Access' });
+      }
+      req.decoded = decoded
+      next();
     })
-    res.send({ token });
+  
+  }
+  
+  const verifyAdmin = async (req, res, next) => {
+    const email = req.decoded.email;
+    const query = { email: email };
+    const user = await userCollection.findOne(query);
+    const isAdmin = user?.role === 'admin';
+    if (!isAdmin) {
+      return res.status(403).send({ message: 'Forbidden Access' });
+    }
+    next();
+  }
+  
 
-})
 
 app.get('/', (req, res) => {
     res.send('Fitness trainer is running!');
@@ -68,6 +88,14 @@ async function run() {
         // // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: '1h'
+            })
+            res.send({ token });
+        
+        })
         
         app.get('/reviews', async (req, res) => {
             const cursor = reviewCollection.find({});
