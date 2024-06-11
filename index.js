@@ -170,6 +170,7 @@ app.patch('/approveTrainer/:id', async (req, res) => {
     const result = await trainersCollection.updateOne(query, updateDoc);
     res.send(result);
 });
+
 app.patch('/rejectTrainer/:id', verifyToken, verifyAdmin, async (req, res) => {
     const id = req.params.id;
     const { reason } = req.body;
@@ -184,8 +185,44 @@ app.patch('/rejectTrainer/:id', verifyToken, verifyAdmin, async (req, res) => {
     res.send(result);
 }
 );
-
-app.patch('/trainers/delete/:email', async (req, res) => {
+app.patch('/trainers/approve/:email', async (req, res) => {
+    try {
+      const email = req.params.email;
+        const query = { email: email };
+  
+      // Find the document first to check its current status
+      const trainer = await usersCollections.findOne(query);
+      
+      if (!trainer) {
+        // Document not found
+        return res.status(404).send({ message: 'Trainer not found' });
+      }
+  
+      if (trainer.status === 'trainer') {
+        
+        return res.status(200).send({ message: 'Trainer status is already trainer', modifiedCount: 0 });
+      }
+  
+      const updateDoc = {
+        $set: {
+          role: 'trainer'
+        }
+      };
+  
+      const result = await usersCollections.updateOne(query, updateDoc);
+  
+      if (result.modifiedCount === 0) {
+        // No documents were modified
+        return res.status(400).send({ message: 'Update failed, no documents modified' });
+      }
+  
+      res.send(result);
+    } catch (error) {
+      console.error('Error updating trainer status:', error);
+      res.status(500).send({ message: 'Internal Server Error' });
+    }
+  });
+app.patch('/trainers/delete/:email',verifyAdmin,verifyToken, async (req, res) => {
     try {
       const email = req.params.email;
         const query = { email: email };
@@ -205,7 +242,7 @@ app.patch('/trainers/delete/:email', async (req, res) => {
   
       const updateDoc = {
         $set: {
-          status: 'member'
+          role: 'member'
         }
       };
   
@@ -222,7 +259,7 @@ app.patch('/trainers/delete/:email', async (req, res) => {
       res.status(500).send({ message: 'Internal Server Error' });
     }
   });
-app.delete('/trainers/remove/:id', async (req, res) => {
+app.delete('/trainers/remove/:id',verifyAdmin,verifyToken, async (req, res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
     const result = await trainersCollection.deleteOne(query);
