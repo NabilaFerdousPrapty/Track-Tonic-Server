@@ -339,35 +339,45 @@ app.post('/payments', async (req, res) => {
 
     res.send(payment);
 })
-app.patch('/posts/:postId/vote', async (req, res) => {
+// Backend API for handling upvotes
+app.patch('/posts/upvote/:postId', async (req, res) => {
     try {
         const { postId } = req.params;
-        const { type } = req.body;
+        // console.log('postId:', postId);
 
-        // Check if the type of vote is valid
-        if (type !== 'upvote' && type !== 'downvote') {
-            return res.status(400).json({ error: 'Invalid vote type' });
+        // Update the post in the database to increment the upvote count
+        const query = { _id: new ObjectId(postId) };
+        const result = await postsCollection.updateOne(query, { $inc: { upvote: 1 } });
+        if (result.modifiedCount === 1) {
+            res.status(200).json({ message: 'Upvote count updated successfully' });
+        }else{
+            res.status(404).json({ error: 'Query document not found' });
         }
-
-        // Define the update object based on the vote type
-        const update = type === 'upvote' ? { $inc: { vote: 1 } } : { $inc: { vote: -1 } };
-
-        // Update the post in the database and return the updated document
-        const updatedPost = await postsCollection.findByIdAndUpdate(postId, update, { new: true });
-
-        // Check if the post exists
-        if (!updatedPost) {
-            return res.status(404).json({ error: 'Post not found' });
-        }
-
-        // Return the updated post with the new vote count
-        res.json(updatedPost);
     } catch (error) {
-        console.error('Error voting for post:', error);
+        console.error('Error upvoting post:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
+// Backend API for handling downvotes
+app.patch('/posts/downvote/:postId', async (req, res) => {
+    try {
+        const { postId } = req.params;
+        // console.log('postId:', postId);
+
+      const query= { _id: new ObjectId(postId) };
+      const result= await postsCollection.updateOne(query, { $inc: { downvote: 1 } });
+
+      if (result.modifiedCount === 1) {
+        res.status(200).json({ message: 'Downvote count updated successfully' });
+      } else {
+        res.status(404).json({ error: 'Query document not found' });
+      }
+    } catch (error) {
+        console.error('Error downvoting post:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
 
 
 
