@@ -16,9 +16,11 @@ app.use(cors(
             "https://tracktonicfitnesstraining.web.app",
             "https://tracktonicfitnesstraining.firebaseapp.com",
         ],
-        credentials: true
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
     }
 ))
+
 app.use(express.json());
 
 
@@ -155,7 +157,7 @@ app.get('/trainers/email/:email', async (req, res) => {
     res.send(trainer);
 }
 );
-app.patch('/approveTrainer/:id', verifyAdmin, verifyToken, async (req, res) => {
+app.patch('/approveTrainer/:id', async (req, res) => {
 
     const id = req.params.id;
     console.log(id);
@@ -197,9 +199,12 @@ app.post('/bookedTrainers', async (req, res) => {
 }
 );
 app.get('/posts', async (req, res) => {
-    const cursor = postsCollection.find({});
-    const posts = await cursor.toArray();
-    res.send(posts)
+    const page = parseInt(req.query.page);
+    const size = parseInt(req.query.size);
+
+    // Fetch classes with pagination
+    const classes = await postsCollection.find().skip(page * size).limit(size).toArray();
+    res.send(classes)
 }
 );
 app.post('/posts', async (req, res) => {
@@ -287,18 +292,29 @@ app.post('/classes', verifyAdmin, verifyToken, async (req, res) => {
 );
 app.get('/classes', async (req, res) => {
     try {
-        const { page = 1, limit = 6 } = req.query;
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const page = parseInt(req.query.page);
+        const size = parseInt(req.query.size);
 
         // Fetch classes with pagination
-        const classes = await classesCollection.find().skip(skip).limit(parseInt(limit)).toArray();
+        const classes = await classesCollection.find().skip(page * size).limit(size).toArray();
 
-        res.json(classes);
+        res.send(classes);
     } catch (err) {
         console.error('Error fetching classes:', err);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
+app.get('/classesCount', async (req, res) => {
+    try {
+        const count = await classesCollection.estimatedDocumentCount();
+        res.send({ count });
+    } catch (err) {
+        console.error('Error fetching classes:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}
+);
 
 app.get('/classes/:id', async (req, res) => {
     const id = req.params.id;
@@ -346,12 +362,12 @@ app.post('/payments', async (req, res) => {
 app.patch('/posts/upvote/:postId', async (req, res) => {
     try {
         const { postId } = req.params;
-       
+
         const query = { _id: new ObjectId(postId) };
         const result = await postsCollection.updateOne(query, { $inc: { upvote: 1 } });
         if (result.modifiedCount === 1) {
             res.status(200).json({ message: 'Upvote count updated successfully' });
-        }else{
+        } else {
             res.status(404).json({ error: 'Query document not found' });
         }
     } catch (error) {
@@ -366,19 +382,29 @@ app.patch('/posts/downvote/:postId', async (req, res) => {
         const { postId } = req.params;
         // console.log('postId:', postId);
 
-      const query= { _id: new ObjectId(postId) };
-      const result= await postsCollection.updateOne(query, { $inc: { downvote: 1 } });
+        const query = { _id: new ObjectId(postId) };
+        const result = await postsCollection.updateOne(query, { $inc: { downvote: 1 } });
 
-      if (result.modifiedCount === 1) {
-        res.status(200).json({ message: 'Downvote count updated successfully' });
-      } else {
-        res.status(404).json({ error: 'Query document not found' });
-      }
+        if (result.modifiedCount === 1) {
+            res.status(200).json({ message: 'Downvote count updated successfully' });
+        } else {
+            res.status(404).json({ error: 'Query document not found' });
+        }
     } catch (error) {
         console.error('Error downvoting post:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+app.get('/postsCount', async (req, res) => {
+    try {
+        const count = await postsCollection.estimatedDocumentCount();
+        res.send({ count });
+    } catch (err) {
+        console.error('Error fetching classes:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}
+);
 
 
 
