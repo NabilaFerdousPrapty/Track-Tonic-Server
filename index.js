@@ -185,11 +185,48 @@ app.patch('/rejectTrainer/:id', verifyToken, verifyAdmin, async (req, res) => {
 }
 );
 
-app.delete('/trainers/delete/:id', async (req, res) => {
+app.patch('/trainers/delete/:email', async (req, res) => {
+    try {
+      const email = req.params.email;
+        const query = { email: email };
+  
+      // Find the document first to check its current status
+      const trainer = await usersCollections.findOne(query);
+      
+      if (!trainer) {
+        // Document not found
+        return res.status(404).send({ message: 'Trainer not found' });
+      }
+  
+      if (trainer.status === 'member') {
+        // Status is already 'member'
+        return res.status(200).send({ message: 'Trainer status is already member', modifiedCount: 0 });
+      }
+  
+      const updateDoc = {
+        $set: {
+          status: 'member'
+        }
+      };
+  
+      const result = await usersCollections.updateOne(query, updateDoc);
+  
+      if (result.modifiedCount === 0) {
+        // No documents were modified
+        return res.status(400).send({ message: 'Update failed, no documents modified' });
+      }
+  
+      res.send(result);
+    } catch (error) {
+      console.error('Error updating trainer status:', error);
+      res.status(500).send({ message: 'Internal Server Error' });
+    }
+  });
+app.delete('/trainers/remove/:id', async (req, res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
     const result = await trainersCollection.deleteOne(query);
-    res.send(result)
+    res.send(result);
 }
 );
 app.post('/bookedTrainers', async (req, res) => {
@@ -325,7 +362,12 @@ app.get('/classes/:id', async (req, res) => {
 );
 app.get('/featuredClasses', async (req, res) => {
     try {
-        const featuredClasses = await classesCollection.find().sort({ total_bookings: -1 }).limit(6).toArray();
+        const featuredClasses = await classesCollection
+    .find()
+    .sort({ total_bookings: -1 }) 
+    .limit(6)
+    .toArray();
+
         res.json(featuredClasses);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -431,3 +473,6 @@ app.get('/payments/:email', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server is running on port: ${port}`);
 });
+
+
+
