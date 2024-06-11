@@ -39,7 +39,7 @@ const verifyToken = (req, res, next) => {
 }
 
 
-const uri = `mongodb+srv://${ process.env.DB_USER }:${ process.env.DB_PASS }@cluster0.pflyccd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.pflyccd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -123,6 +123,12 @@ app.get('/trainers', async (req, res) => {
     res.send(trainers)
 }
 );
+app.get('/trainers/all', async (req, res) => {
+    const cursor = trainersCollection.find({});
+    const trainers = await cursor.toArray();
+    res.send(trainers)
+}
+);
 app.get('/trainers/pending', async (req, res) => {
     const cursor = trainersCollection.find({ status: 'pending' });
     const trainers = await cursor.toArray();
@@ -147,9 +153,9 @@ app.get('/trainers/email/:email', async (req, res) => {
     const query = { email: email };
     const trainer = await trainersCollection.find(query).toArray();
     res.send(trainer);
-}   
+}
 );
-app.patch('/approveTrainer/:id',verifyAdmin,verifyToken, async (req, res) => {
+app.patch('/approveTrainer/:id', verifyAdmin, verifyToken, async (req, res) => {
 
     const id = req.params.id;
     console.log(id);
@@ -270,20 +276,20 @@ app.get('/users/trainer/:email', async (req, res) => {
     res.send({ trainer })
 }
 );
-app.post('/classes',verifyAdmin,verifyToken, async (req, res) => {
+app.post('/classes', verifyAdmin, verifyToken, async (req, res) => {
     const newClass = req.body;
     const result = await classesCollection.insertOne(newClass);
     res.send(result);
-}   
+}
 );
 app.get('/classes', async (req, res) => {
     try {
         const { page = 1, limit = 6 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
-        
+
         // Fetch classes with pagination
         const classes = await classesCollection.find().skip(skip).limit(parseInt(limit)).toArray();
-        
+
         res.json(classes);
     } catch (err) {
         console.error('Error fetching classes:', err);
@@ -364,7 +370,7 @@ app.patch('/posts/:postId/vote', async (req, res) => {
 
 
 
-  
+
 app.get('/payments', async (req, res) => {
     const cursor = paymentCollection.find({});
     const payments = await cursor.toArray();
@@ -386,5 +392,5 @@ app.get('/payments/:email', async (req, res) => {
 
 
 app.listen(port, () => {
-    console.log(`Server is running on port: ${ port }`);
+    console.log(`Server is running on port: ${port}`);
 });
