@@ -170,16 +170,19 @@ app.patch('/approveTrainer/:id', verifyAdmin, verifyToken, async (req, res) => {
 });
 app.patch('/rejectTrainer/:id', verifyToken, verifyAdmin, async (req, res) => {
     const id = req.params.id;
+    const { reason } = req.body;
     const query = { _id: new ObjectId(id) };
     const updateDoc = {
         $set: {
-            status: 'rejected'
+            status: 'rejected',
+            reason: reason,
         },
     };
     const result = await trainersCollection.updateOne(query, updateDoc);
     res.send(result);
 }
 );
+
 app.delete('/trainers/delete/:id', async (req, res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
@@ -343,9 +346,7 @@ app.post('/payments', async (req, res) => {
 app.patch('/posts/upvote/:postId', async (req, res) => {
     try {
         const { postId } = req.params;
-        // console.log('postId:', postId);
-
-        // Update the post in the database to increment the upvote count
+       
         const query = { _id: new ObjectId(postId) };
         const result = await postsCollection.updateOne(query, { $inc: { upvote: 1 } });
         if (result.modifiedCount === 1) {
