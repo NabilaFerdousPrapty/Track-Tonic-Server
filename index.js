@@ -152,9 +152,10 @@ app.get('/trainers/:id', async (req, res) => {
 );
 app.get('/trainers/email/:email', async (req, res) => {
     const email = req.params.email;
-    const query = { email: email,
+    const query = {
+        email: email,
         status: 'approved'
-     };
+    };
     const trainer = await trainersCollection.find(query).toArray();
     res.send(trainer);
 }
@@ -585,53 +586,26 @@ app.get('/payments/:email', async (req, res) => {
 
 app.patch('/updateAvailability/:email', async (req, res) => {
     try {
-      const { availableDays, available_times,includes,slot_name,slot_description } = req.body;
-      const email = req.params.email;
-  
-      // Update the document in the database
-      const query = { email: email ,
-        status: "approved" 
-      };
-      const updateDoc = {
-        $push: {
-            availableDays: { $each: availableDays },
-            available_times: { $each: available_times }
-
-        },
-        $set: {
-            includes: includes,
-            slot_name: slot_name,
-            slot_description: slot_description
-        }
-      };
-      const result = await trainersCollection.updateOne(query, updateDoc);
-
-      if (result.modifiedCount === 1) {
-        // Document updated successfully
-        res.status(200).send({ message: 'Availability updated successfully' });
-      } else {
-        // Document not found or not updated
-        res.status(404).send({ message: 'Trainer not found or availability not updated' });
-      }
-    } catch (error) {
-      console.error(error);
-      res.status(500).send({ message: 'Internal server error' });
-    }
-  });
-
-  app.patch('/deleteAvailability/:email', async (req, res) => {
-    try {
+        const { availableDays, available_times, includes, slot_name, slot_description } = req.body;
         const email = req.params.email;
-        const availableDays  = req.body;
 
         // Update the document in the database
-        const query = { email: email, status: "approved" };
+        const query = {
+            email: email,
+            status: "approved"
+        };
         const updateDoc = {
-            $pull: {
-                availableDays: { $in: availableDays }
+            $push: {
+                availableDays: { $each: availableDays },
+                available_times: { $each: available_times }
+
+            },
+            $set: {
+                includes: includes,
+                slot_name: slot_name,
+                slot_description: slot_description
             }
         };
-
         const result = await trainersCollection.updateOne(query, updateDoc);
 
         if (result.modifiedCount === 1) {
@@ -647,7 +621,57 @@ app.patch('/updateAvailability/:email', async (req, res) => {
     }
 });
 
+app.patch('/deleteAvailability/:email', async (req, res) => {
+    try {
+        const email = req.params.email;
+        let availableDays = req.body;
 
+        // Validate that availableDays is an array
+        if (!Array.isArray(availableDays)) {
+            availableDays = [availableDays]; // Convert to an array if it's not
+        }
+
+        // Update the document in the database
+        const query = { email: email, status: "approved" };
+        const updateDoc = {
+            $pull: {
+                availableDays: { $in: availableDays }
+            }
+        };
+
+        const result = await trainersCollection.updateOne(query, updateDoc);
+
+        if (result.modifiedCount === 1) {
+            res.status(200).send({ message: 'Availability updated successfully' });
+        } else {
+            // Document not found or not updated
+            res.status(404).send({ message: 'Trainer not found or availability not updated' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: 'Internal server error' });
+    }
+});
+
+
+app.get('/collectPayment', async (req, res) => {
+    try {
+        const {name,day,time}=req.query;
+        const query = {
+            trainer_name: name,
+            'slot_name.date': day,
+            'slot_name.time': time
+        };
+        const payment = await paymentCollection.find(query).toArray();
+        res.send(payment);
+    } catch (error) {
+        console.error("Error fetching payment:", error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+
+  
 
 
 
