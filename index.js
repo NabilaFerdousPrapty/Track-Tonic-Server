@@ -417,20 +417,7 @@ app.post('/classes', verifyAdmin, verifyToken, async (req, res) => {
     res.send(result);
 }
 );
-// app.get('/classes', async (req, res) => {
-//     try {
-//         const page = parseInt(req.query.page);
-//         const size = parseInt(req.query.size);
 
-//         // Fetch classes with pagination
-//         const classes = await classesCollection.find().skip(page * size).limit(size).toArray();
-
-//         res.send(classes);
-//     } catch (err) {
-//         console.error('Error fetching classes:', err);
-//         res.status(500).json({ message: 'Internal Server Error' });
-//     }
-// });
 app.get('/classes', async (req, res) => {
     try {
         const page = parseInt(req.query.page);
@@ -656,19 +643,31 @@ app.patch('/deleteAvailability/:email', async (req, res) => {
 
 app.get('/collectPayment', async (req, res) => {
     try {
-        const {name,day,time}=req.query;
+        let { name, day, time } = req.query;
+
+        // Validate query parameters
+        if (!name || !day || !time) {
+            return res.status(400).send("Missing query parameters: name, day, or time");
+        }
+ 
+        
+        name = name.replace(/%20/g, ' ');
+
         const query = {
             trainer_name: name,
             'slot_name.date': day,
             'slot_name.time': time
         };
+
         const payment = await paymentCollection.find(query).toArray();
+        console.log('payment', payment);
         res.send(payment);
     } catch (error) {
         console.error("Error fetching payment:", error);
         res.status(500).send("Internal Server Error");
     }
 });
+
 
 
   
