@@ -152,9 +152,34 @@ app.get('/trainers/:id', async (req, res) => {
 );
 app.get('/trainers/email/:email', async (req, res) => {
     const email = req.params.email;
-    const query = { email: email };
+    const query = { email: email,
+        status: 'approved'
+     };
     const trainer = await trainersCollection.find(query).toArray();
     res.send(trainer);
+}
+);
+app.get('/rejectedTrainers/:email', async (req, res) => {
+    const email = req.params.email;
+    const query = {
+        email: email,
+        status: 'rejected'
+    };
+
+
+    const trainer = await trainersCollection.find(query).toArray();
+    res.send(trainer);
+}
+);
+app.get('/pendingTrainers/:email', async (req, res) => {
+    const email = req.params.email;
+    const query = {
+        email: email,
+        status: 'pending'
+    };
+    const trainer = await trainersCollection.find(query).toArray();
+    res.send(trainer);
+
 }
 );
 app.patch('/approveTrainer/:id', async (req, res) => {
@@ -171,7 +196,7 @@ app.patch('/approveTrainer/:id', async (req, res) => {
     res.send(result);
 });
 
-app.patch('/rejectTrainer/:id', verifyToken, verifyAdmin, async (req, res) => {
+app.patch('/rejectTrainer/:id', async (req, res) => {
     const id = req.params.id;
     const { reason } = req.body;
     const query = { _id: new ObjectId(id) };
@@ -187,85 +212,112 @@ app.patch('/rejectTrainer/:id', verifyToken, verifyAdmin, async (req, res) => {
 );
 app.patch('/trainers/approve/:email', async (req, res) => {
     try {
-      const email = req.params.email;
+        const email = req.params.email;
         const query = { email: email };
-  
-      // Find the document first to check its current status
-      const trainer = await usersCollections.findOne(query);
-      
-      if (!trainer) {
-        // Document not found
-        return res.status(404).send({ message: 'Trainer not found' });
-      }
-  
-      if (trainer.status === 'trainer') {
-        
-        return res.status(200).send({ message: 'Trainer status is already trainer', modifiedCount: 0 });
-      }
-  
-      const updateDoc = {
-        $set: {
-          role: 'trainer'
+
+        // Find the document first to check its current status
+        const trainer = await usersCollections.findOne(query);
+
+        if (!trainer) {
+            // Document not found
+            return res.status(404).send({ message: 'Trainer not found' });
         }
-      };
-  
-      const result = await usersCollections.updateOne(query, updateDoc);
-  
-      if (result.modifiedCount === 0) {
-        // No documents were modified
-        return res.status(400).send({ message: 'Update failed, no documents modified' });
-      }
-  
-      res.send(result);
+
+        if (trainer.status === 'trainer') {
+
+            return res.status(200).send({ message: 'Trainer status is already trainer', modifiedCount: 0 });
+        }
+
+        const updateDoc = {
+            $set: {
+                role: 'trainer'
+            }
+        };
+
+        const result = await usersCollections.updateOne(query, updateDoc);
+
+        if (result.modifiedCount === 0) {
+            // No documents were modified
+            return res.status(400).send({ message: 'Update failed, no documents modified' });
+        }
+
+        res.send(result);
     } catch (error) {
-      console.error('Error updating trainer status:', error);
-      res.status(500).send({ message: 'Internal Server Error' });
+        console.error('Error updating trainer status:', error);
+        res.status(500).send({ message: 'Internal Server Error' });
     }
-  });
-app.patch('/trainers/delete/:email',verifyAdmin,verifyToken, async (req, res) => {
+});
+app.patch('/trainers/delete/:email', async (req, res) => {
     try {
-      const email = req.params.email;
+        const email = req.params.email;
         const query = { email: email };
-  
-      // Find the document first to check its current status
-      const trainer = await usersCollections.findOne(query);
-      
-      if (!trainer) {
-        // Document not found
-        return res.status(404).send({ message: 'Trainer not found' });
-      }
-  
-      if (trainer.status === 'member') {
-        // Status is already 'member'
-        return res.status(200).send({ message: 'Trainer status is already member', modifiedCount: 0 });
-      }
-  
-      const updateDoc = {
-        $set: {
-          role: 'member'
+
+        // Find all documents with the given email
+        const trainers = await usersCollections.find(query).toArray();
+
+        if (!trainers || trainers.length === 0) {
+            // No document found
+            return res.status(404).send({ message: 'Trainer not found' });
         }
-      };
-  
-      const result = await usersCollections.updateOne(query, updateDoc);
-  
-      if (result.modifiedCount === 0) {
-        // No documents were modified
-        return res.status(400).send({ message: 'Update failed, no documents modified' });
-      }
-  
-      res.send(result);
+
+        // Check if any of the trainers need updating
+        const trainersToUpdate = trainers.filter(trainer => trainer.role !== 'member');
+
+        if (trainersToUpdate.length === 0) {
+            // All trainers already have the status 'member'
+            return res.status(200).send({ message: 'Trainer status is already member for all trainers', modifiedCount: 0 });
+        }
+
+        // Update all trainers that need their role set to 'member'
+        const bulkOperations = trainersToUpdate.map(trainer => {
+            return {
+                updateOne: {
+                    filter: { _id: trainer._id },
+                    update: { $set: { role: 'member' } }
+                }
+            };
+        });
+
+        const result = await usersCollections.bulkWrite(bulkOperations);
+
+        if (result.modifiedCount === 0) {
+            // No documents were modified
+            return res.status(400).send({ message: 'Update failed, no documents modified' });
+        }
+
+        res.send(result);
     } catch (error) {
-      console.error('Error updating trainer status:', error);
-      res.status(500).send({ message: 'Internal Server Error' });
+        console.error('Error updating trainer status:', error);
+        res.status(500).send({ message: 'Internal Server Error' });
     }
-  });
-app.delete('/trainers/remove/:id',verifyAdmin,verifyToken, async (req, res) => {
+});
+
+app.delete('/trainers/remove/:id', async (req, res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
     const result = await trainersCollection.deleteOne(query);
     res.send(result);
 }
 );
+
+app.get('/suggestedTrainers/:designation', async (req, res) => {
+    let designation = req.params.designation;
+    designation = designation.replace(/%20/g, ' '); // Replace %20 with space
+    const trainers = await trainersCollection.find({
+        $and: [
+            {
+                $or: [
+                    { designation: designation },
+                    { skills: designation }
+                ]
+            },
+            { status: 'approved' } // Additional condition for approved status
+        ]
+    }).toArray();
+    res.send(trainers);
+});
+
+
 app.post('/bookedTrainers', async (req, res) => {
     const newBooking = req.body;
     const result = await bookedTrainersCollection.insertOne(newBooking);
@@ -364,13 +416,34 @@ app.post('/classes', verifyAdmin, verifyToken, async (req, res) => {
     res.send(result);
 }
 );
+// app.get('/classes', async (req, res) => {
+//     try {
+//         const page = parseInt(req.query.page);
+//         const size = parseInt(req.query.size);
+
+//         // Fetch classes with pagination
+//         const classes = await classesCollection.find().skip(page * size).limit(size).toArray();
+
+//         res.send(classes);
+//     } catch (err) {
+//         console.error('Error fetching classes:', err);
+//         res.status(500).json({ message: 'Internal Server Error' });
+//     }
+// });
 app.get('/classes', async (req, res) => {
     try {
         const page = parseInt(req.query.page);
         const size = parseInt(req.query.size);
+        const search = req.query.search; // Get the search query parameter
 
-        // Fetch classes with pagination
-        const classes = await classesCollection.find().skip(page * size).limit(size).toArray();
+        // MongoDB query object
+        const query = search ? { class_name: { $regex: search, $options: 'i' } } : {};
+
+        // Fetch classes with pagination and search filtering
+        const classes = await classesCollection.find(query)
+            .skip(page * size)
+            .limit(size)
+            .toArray();
 
         res.send(classes);
     } catch (err) {
@@ -378,6 +451,8 @@ app.get('/classes', async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
+
 
 app.get('/classesCount', async (req, res) => {
     try {
@@ -400,16 +475,18 @@ app.get('/classes/:id', async (req, res) => {
 app.get('/featuredClasses', async (req, res) => {
     try {
         const featuredClasses = await classesCollection
-    .find()
-    .sort({ total_bookings: -1 }) 
-    .limit(6)
-    .toArray();
+            .find()
+            .sort({ total_bookings: -1 })
+            .limit(6)
+            .toArray();
 
         res.json(featuredClasses);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
+
+
 app.post("/create_payment_intent", async (req, res) => {
     const { price } = req.body;
     const amount = parseInt(price * 100);
@@ -506,10 +583,79 @@ app.get('/payments/:email', async (req, res) => {
     }
 });
 
+app.patch('/updateAvailability/:email', async (req, res) => {
+    try {
+      const { availableDays, available_times,includes,slot_name,slot_description } = req.body;
+      const email = req.params.email;
+  
+      // Update the document in the database
+      const query = { email: email ,
+        status: "approved" 
+      };
+      const updateDoc = {
+        $push: {
+            availableDays: { $each: availableDays },
+            available_times: { $each: available_times }
+
+        },
+        $set: {
+            includes: includes,
+            slot_name: slot_name,
+            slot_description: slot_description
+        }
+      };
+      const result = await trainersCollection.updateOne(query, updateDoc);
+
+      if (result.modifiedCount === 1) {
+        // Document updated successfully
+        res.status(200).send({ message: 'Availability updated successfully' });
+      } else {
+        // Document not found or not updated
+        res.status(404).send({ message: 'Trainer not found or availability not updated' });
+      }
+    } catch (error) {
+      console.error(error);
+      res.status(500).send({ message: 'Internal server error' });
+    }
+  });
+
+  app.patch('/deleteAvailability/:email', async (req, res) => {
+    try {
+        const email = req.params.email;
+        const availableDays  = req.body;
+
+        // Update the document in the database
+        const query = { email: email, status: "approved" };
+        const updateDoc = {
+            $pull: {
+                availableDays: { $in: availableDays }
+            }
+        };
+
+        const result = await trainersCollection.updateOne(query, updateDoc);
+
+        if (result.modifiedCount === 1) {
+            // Document updated successfully
+            res.status(200).send({ message: 'Availability updated successfully' });
+        } else {
+            // Document not found or not updated
+            res.status(404).send({ message: 'Trainer not found or availability not updated' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: 'Internal server error' });
+    }
+});
+
+
+
+
 
 app.listen(port, () => {
     console.log(`Server is running on port: ${port}`);
 });
+
+
 
 
 
