@@ -65,9 +65,9 @@ const classesCollection = client.db("TrackTonic").collection("classes");
 async function dbConnect() {
     try {
         // await client.db('admin').command({ ping: 1 })
-        console.log('You successfully connected to MongoDB!')
+        // console.log('You successfully connected to MongoDB!')
     } catch (err) {
-        console.log(err)
+        // console.log(err)
     }
 }
 dbConnect()
@@ -186,7 +186,7 @@ app.get('/pendingTrainers/:email', async (req, res) => {
 app.patch('/approveTrainer/:id', async (req, res) => {
 
     const id = req.params.id;
-    console.log(id);
+    // console.log(id);
     const query = { _id: new ObjectId(id) };
     const updateDoc = {
         $set: {
@@ -489,7 +489,7 @@ app.post("/create_payment_intent", async (req, res) => {
         clientSecret: paymentIntent.client_secret
 
     });
-    console.log('secret', paymentIntent.client_secret);
+    // console.log('secret', paymentIntent.client_secret);
 }
 );
 app.post('/payments', async (req, res) => {
@@ -497,7 +497,7 @@ app.post('/payments', async (req, res) => {
     const paymentResult = await paymentCollection.insertOne(payment);
 
     //  carefully delete each item from the cart
-    console.log('payment info', payment);
+    // console.log('payment info', payment);
 
 
     res.send(payment);
@@ -660,7 +660,7 @@ app.get('/collectPayment', async (req, res) => {
         };
 
         const payment = await paymentCollection.find(query).toArray();
-        console.log('payment', payment);
+        // console.log('payment', payment);
         res.send(payment);
     } catch (error) {
         console.error("Error fetching payment:", error);
