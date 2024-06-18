@@ -329,9 +329,9 @@ app.get('/posts', async (req, res) => {
     const page = parseInt(req.query.page);
     const size = parseInt(req.query.size);
 
-    // Fetch classes with pagination
-    const classes = await postsCollection.find().skip(page * size).limit(size).toArray();
-    res.send(classes)
+    // Fetch posts with pagination
+    const posts = await postsCollection.find().skip(page * size).limit(size).toArray();
+    res.send(posts)
 }
 );
 app.post('/posts', async (req, res) => {
@@ -439,6 +439,13 @@ app.get('/classes', async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+app.patch('bookClass/:id',verifyToken, async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await classesCollection.updateOne(query, { $inc: { total_bookings: 1 } });
+    res.send(result);
+}
+);
 
 
 
