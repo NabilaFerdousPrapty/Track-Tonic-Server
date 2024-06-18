@@ -439,8 +439,9 @@ app.get('/classes', async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
-app.patch('bookClass/:id',verifyToken, async (req, res) => {
+app.patch('/bookClass/:id', async (req, res) => {
     const id = req.params.id;
+    // console.log(id);
     const query = { _id: new ObjectId(id) };
     const result = await classesCollection.updateOne(query, { $inc: { total_bookings: 1 } });
     res.send(result);
